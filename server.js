@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const multer = require('multer');
+const bodyParser = require('body-parser');
 require('dotenv').config();
 
 // Configurar a conexão com o MongoDB Atlas
@@ -20,11 +20,7 @@ mongoose.connect(mongoUri, {
   console.error('Erro ao conectar ao MongoDB Atlas:', err);
 });
 
-// Configurar armazenamento do multer
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-const app = express();
+const db = mongoose.connection;
 
 // Definir o esquema do Mongoose para dados adicionais
 const Schema = mongoose.Schema;
@@ -36,39 +32,33 @@ const UserSchema = new Schema({
   curso: String,
   turno: String,
   solicitacao: String,
-  file: {
-    data: Buffer,
-    contentType: String,
-    filename: String
-  }
+  fileUrl: String // Atualizado para armazenar o URL do arquivo
 });
 
 const User = mongoose.model('User', UserSchema);
 
-// Rota para receber os dados do Typebot com arquivo
-app.post('/submit', upload.single('file'), async (req, res) => {
+const app = express();
+app.use(bodyParser.json());
+
+// Rota para receber os dados do Typebot com o link do arquivo
+app.post('/submit', async (req, res) => {
+  const { nome, registro, email, curso, turno, solicitacao, file } = req.body;
+
+  const newUser = new User({
+    nome,
+    registro,
+    email,
+    curso,
+    turno,
+    solicitacao,
+    fileUrl: file // Salvar o URL do arquivo
+  });
+
   try {
-    // Parse JSON data from `jsonData`
-    const jsonData = JSON.parse(req.body.jsonData);
-
-    const newUser = new User({
-      nome: jsonData.nome,
-      registro: jsonData.registro,
-      email: jsonData.email,
-      curso: jsonData.curso,
-      turno: jsonData.turno,
-      solicitacao: jsonData.solicitacao,
-      file: req.file ? {
-        data: req.file.buffer,
-        contentType: req.file.mimetype,
-        filename: req.file.originalname
-      } : null
-    });
-
     await newUser.save();
-    res.status(201).send('Dados e arquivo salvos com sucesso');
+    res.status(201).send('Dados e link do arquivo salvos com sucesso');
   } catch (error) {
-    console.error('Erro ao salvar os dados:', error);
+    console.error(error);
     res.status(500).send('Erro ao salvar os dados');
   }
 });

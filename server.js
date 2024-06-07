@@ -1,6 +1,5 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const multer = require('multer');
 require('dotenv').config();
 
@@ -21,14 +20,11 @@ mongoose.connect(mongoUri, {
   console.error('Erro ao conectar ao MongoDB Atlas:', err);
 });
 
-const db = mongoose.connection;
-
 // Configurar armazenamento do multer
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 const app = express();
-app.use(bodyParser.json());
 
 // Definir o esquema do Mongoose para dados adicionais
 const Schema = mongoose.Schema;
@@ -51,27 +47,28 @@ const User = mongoose.model('User', UserSchema);
 
 // Rota para receber os dados do Typebot com arquivo
 app.post('/submit', upload.single('file'), async (req, res) => {
-  const { nome, registro, email, curso, turno, solicitacao } = req.body;
-
-  const newUser = new User({
-    nome,
-    registro,
-    email,
-    curso,
-    turno,
-    solicitacao,
-    file: {
-      data: req.file.buffer,
-      contentType: req.file.mimetype,
-      filename: req.file.originalname
-    }
-  });
-
   try {
+    // Parse JSON data from `jsonData`
+    const jsonData = JSON.parse(req.body.jsonData);
+
+    const newUser = new User({
+      nome: jsonData.nome,
+      registro: jsonData.registro,
+      email: jsonData.email,
+      curso: jsonData.curso,
+      turno: jsonData.turno,
+      solicitacao: jsonData.solicitacao,
+      file: req.file ? {
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+        filename: req.file.originalname
+      } : null
+    });
+
     await newUser.save();
     res.status(201).send('Dados e arquivo salvos com sucesso');
   } catch (error) {
-    console.error(error);
+    console.error('Erro ao salvar os dados:', error);
     res.status(500).send('Erro ao salvar os dados');
   }
 });

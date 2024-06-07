@@ -8,21 +8,20 @@ require('dotenv').config();
 const mongoUri = process.env.MONGO_URI;
 
 if (!mongoUri) {
-  console.error('A variável MONGO_URI não está definida no arquivo .env');
+  console.error('A variável MONGO_URI não está definida no ambiente');
   process.exit(1);
 }
 
 mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
+}).then(() => {
+  console.log('Conectado ao MongoDB Atlas');
+}).catch(err => {
+  console.error('Erro ao conectar ao MongoDB Atlas:', err);
 });
 
 const db = mongoose.connection;
-
-db.on('error', console.error.bind(console, 'Erro de conexão:'));
-db.once('open', () => {
-  console.log('Conectado ao MongoDB Atlas');
-});
 
 // Configurar armazenamento do multer
 const storage = multer.memoryStorage();
